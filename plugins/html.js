@@ -2,7 +2,13 @@ var fs = require('fs')
   , path = require('path')
 
 exports.test = function (file, callback) {
-  fs.stat(expand(file), function (err, stats) {
+  file = expand(file)
+
+  if (path.extname(file) !== '.html') {
+    return callback(null, false)
+  }
+
+  fs.stat(file, function (err, stats) {
     callback(null, err == null)
   })
 }
