@@ -38,11 +38,53 @@
   }
 
   function refresh(url) {
-    // TODO: pretty much everything
+    // TODO: scripts, images and background images
+    url = normalize(url)
+
+    if (base === url) {
+      window.location.reload()
+    }
+
+    refreshStyleSheets(url)
+  }
+
+  function refreshStyleSheets(url) {
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      visitStyleSheet(url, document.styleSheets[i])
+    }
+  }
+
+  function visitStyleSheet(url, sheet) {
+    // TODO: handle imported stylesheets
+    if (!sheet.href || normalize(sheet.href) !== url) {
+      return
+    }
+
+    var node = sheet.ownerNode
+
+    if (node != null && node.tagName === 'LINK') {
+      var clone = node.cloneNode(false)
+      clone.href = next(sheet.href)
+      clone.onload = function () {
+        var parent = node.parentNode
+        if (parent != null) {
+          parent.removeChild(node)
+        }
+      }
+
+      node.parentNode.insertBefore(clone, node)
+    }
+  }
+
+  // appends a "random" new querystring parameter to a url
+  function next(url) {
+    return normalize(url) + '?t=' + (new Date).getTime()
   }
 
   // expands relative URLs to fully qualified ones
-  function expand(url) {
+  function normalize(url) {
+    url = url.replace(/[\?#].*$/, '')
+
     if (/[a-z]+:\/\//i.test(url)) {
       return url
     }
