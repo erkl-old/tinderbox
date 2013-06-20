@@ -39,5 +39,19 @@
     // TODO: pretty much everything
   }
 
+  // expands relative URLs to fully qualified ones
+  function expand(url) {
+    if (/[a-z]+:\/\//i.test(url)) {
+      return url
+    }
+
+    if (url.charAt(0) === '/') {
+      return protocol + '//' + host + url
+    }
+
+    var slash = base.lastIndexOf('/')
+    return base.substring(0, slash+1) + url
+  }
+
   window.tinderbox = tinderbox
 })();
