@@ -1,5 +1,8 @@
 (function () {
-  var host = window.location.host
+  var protocol = window.location.protocol || 'http:'
+    , host = window.location.host
+    , base = protocol + '//' + host + window.location.pathname
+    , seq = 0
 
   function tinderbox(state) {
     var socket = io.connect('ws://' + host + '/')
@@ -18,10 +21,17 @@
     })
 
     function trigger(url, rev) {
+      if (rev < seq) {
+        // TODO: the server must've restarted (because revision ids
+        //       are being reused) -- force a full reload
+      }
+
       if ((state[url] || -1) < rev) {
         refresh(url)
         state[url] = rev
       }
+
+      seq++
     }
   }
 
