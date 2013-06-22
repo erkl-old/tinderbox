@@ -1,5 +1,5 @@
 { "name": "tinderbox"
-, "description": ""
+, "description": "kick your prototyping into plaid speed with live reloads"
 , "version": "0.0.0"
 , "dependencies":
   { "express": "~3.2.6"
