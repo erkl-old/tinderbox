@@ -7,24 +7,21 @@
     var socket = io.connect('ws://' + host + '/')
       , initiated = false
 
-    // handle snapshot updates (this should only happen once; when
-    // the connection is established for the first time)
     socket.on('snapshot', function (revs) {
       // if we receive a second snapshot command the server must've
       // reset, which in turns means that all revision numbers
       // are now invalid
       if (initiated) {
         window.location.reload()
+      } else {
+        initiated = true
       }
 
       for (var url in revs) {
         check(url, revs[url])
       }
-
-      initiated = true
     })
 
-    // listen for single resource refreshes
     socket.on('refresh', function (url, rev) {
       check(url, rev)
     })
@@ -37,64 +34,74 @@
     }
   }
 
+  // triggers a refresh of all elements or resources referencing
+  // the URL
   function refresh(url) {
-    // TODO: scripts, images and background images
     url = normalize(url)
 
+    // reload the whole document if the HTML page itself has changed
     if (base === url) {
-      window.location.reload()
+      return window.location.reload()
     }
 
-    refreshStyleSheets(url)
-  }
-
-  function refreshStyleSheets(url) {
+    // reload referenced all style sheets
     for (var i = 0; i < document.styleSheets.length; i++) {
-      visitStyleSheet(url, document.styleSheets[i])
-    }
-  }
+      var styleSheet = document.styleSheets[i]
+        , node = styleSheet.ownerNode
+        , tag = (node || {}).tagName
 
-  function visitStyleSheet(url, sheet) {
-    // TODO: handle imported stylesheets
-    if (!sheet.href || normalize(sheet.href) !== url) {
-      return
-    }
-
-    var node = sheet.ownerNode
-
-    if (node != null && node.tagName === 'LINK') {
-      var clone = node.cloneNode(false)
-      clone.href = next(sheet.href)
-      clone.onload = function () {
-        var parent = node.parentNode
-        if (parent != null) {
-          parent.removeChild(node)
-        }
+      if (tag === 'LINK' && checkStyleSheet(url, styleSheet)) {
+        var clone = replace(node)
+        clone.href = next(node.href)
       }
+    }
 
-      node.parentNode.insertBefore(clone, node)
+    // TODO: scripts, images
+  }
+
+  // returns true if the style sheet references the URL in question, or if
+  // any of its imports does
+  function checkStyleSheet(url, styleSheet) {
+    if (styleSheet.href && normalize(styleSheet.href) === url) {
+      return true
+    }
+
+    for (var i = 0; i < styleSheet.cssRules.length; i++) {
+      var child = styleSheet.cssRules[i].styleSheet
+      if (child != null && checkStyleSheet(url, child)) {
+        return true
+      }
     }
   }
 
-  // appends a "random" new querystring parameter to a url
+  // replaces a DOM element with an identical copy
+  function replace(node) {
+    var clone = node.cloneNode(false)
+
+    clone.onload = function () {
+      if (node.parentNode != null) {
+        node.parentNode.removeChild(node)
+      }
+    }
+
+    node.parentNode.insertBefore(clone, node)
+
+    return clone
+  }
+
+  // generates a new URL, known not to be cached by the browser, by
+  // appending a timestamp to a base URL
   function next(url) {
     return normalize(url) + '?t=' + (new Date).getTime()
   }
 
-  // expands relative URLs to fully qualified ones
+  // resolves relative URLs to fully qualified ones
   function normalize(url) {
     url = url.replace(/[\?#].*$/, '')
 
-    if (/[a-z]+:\/\//i.test(url)) {
-      return url
-    }
-
-    if (url.charAt(0) === '/') {
-      return protocol + '//' + host + url
-    }
-
-    var slash = base.lastIndexOf('/')
-    return base.substring(0, slash+1) + url
+    if (/[a-z]+:\/\//i.test(url)) return url
+    if (url.charAt(0) === '/') return protocol + '//' + host + url
+    return base.substring(0, base.lastIndexOf('/')+1) + url
   }
 
   window.tinderbox = tinderbox
